@@ -2,15 +2,15 @@ name: neura
 
 on:
   push:
-    branches: [ "main" ] # Berjalan otomatis saat push ke main
+    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ] # Berjalan otomatis saat ada Pull Request
-  workflow_dispatch:      # Memungkinkan kamu menjalankan manual dari tab Actions
+    branches: [ "main" ]
+  workflow_dispatch:      # Tombol manual di tab Actions
 
 jobs:
   build-ios:
     name: Build Flutter iOS
-    runs-on: macos-latest # Wajib menggunakan macOS untuk aplikasi Apple
+    runs-on: macos-latest
 
     steps:
       - name: Checkout repository
@@ -26,24 +26,30 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          # flutter-version: '3.x.x' # Hapus komentar dan isi jika ingin versi tertentu
 
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Install Pods
+      - name: Fix Podfile and Install Pods
         run: |
           cd ios
-          # Membersihkan cache pod lama agar tidak konflik
+          # Jika Podfile tidak ada (karena tidak ter-push dari Windows), buat otomatis
+          if [ ! -f "Podfile" ]; then
+            echo "⚠️ Podfile tidak ditemukan! Membuat Podfile baru..."
+            pod init
+          fi
+          
+          # Membersihkan sisa-sisa lama untuk menghindari konflik
           rm -rf Pods
           rm -rf Podfile.lock
-          # Update repo dan install pod baru
+          
+          # Jalankan instalasi pod
           pod repo update
           pod install
           cd ..
 
       - name: Build IPA (No Code Signing)
-        # --no-codesign digunakan agar build tidak gagal karena tidak ada sertifikat Apple
+        # Membuat file .ipa untuk testing struktur tanpa sertifikat berbayar Apple
         run: flutter build ipa --release --no-codesign
 
       - name: Upload IPA Artifact
@@ -51,4 +57,4 @@ jobs:
         with:
           name: ios-ipa-release
           path: build/ios/ipa/*.ipa
-          if-no-files-found: warn
+          if-no-files-found: error
