@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  workflow_dispatch:      # Tombol manual di tab Actions
+  workflow_dispatch:
 
 jobs:
   build-ios:
@@ -33,28 +33,24 @@ jobs:
       - name: Fix Podfile and Install Pods
         run: |
           cd ios
-          # Jika Podfile tidak ada (karena tidak ter-push dari Windows), buat otomatis
           if [ ! -f "Podfile" ]; then
             echo "⚠️ Podfile tidak ditemukan! Membuat Podfile baru..."
             pod init
           fi
-          
-          # Membersihkan sisa-sisa lama untuk menghindari konflik
           rm -rf Pods
           rm -rf Podfile.lock
-          
-          # Jalankan instalasi pod
           pod repo update
           pod install
           cd ..
 
-      - name: Build IPA (No Code Signing)
-        # Membuat file .ipa untuk testing struktur tanpa sertifikat berbayar Apple
-        run: flutter build ipa --release --no-codesign
+      - name: Build iOS App Bundle
+        # Kita ganti 'ipa' jadi 'ios --no-codesign' agar prosesnya tuntas
+        run: flutter build ios --release --no-codesign
 
-      - name: Upload IPA Artifact
+      - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-ipa-release
-          path: build/ios/ipa/*.ipa
+          name: ios-build-bundle
+          # Kita ambil seluruh folder .app hasil build
+          path: build/ios/iphoneos/*.app
           if-no-files-found: error
