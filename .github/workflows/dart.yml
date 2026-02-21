@@ -2,20 +2,21 @@ name: neura
 
 on:
   push:
-    branches: [ "main" ] # Jalankan saat push ke branch main
+    branches: [ "main" ] # Berjalan otomatis saat push ke main
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main" ] # Berjalan otomatis saat ada Pull Request
+  workflow_dispatch:      # Memungkinkan kamu menjalankan manual dari tab Actions
 
 jobs:
   build-ios:
-    # WAJIB menggunakan macos untuk build iOS
-    runs-on: macos-latest
+    name: Build Flutter iOS
+    runs-on: macos-latest # Wajib menggunakan macOS untuk aplikasi Apple
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Java (Beberapa plugin Flutter butuh ini)
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
@@ -25,24 +26,29 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          # flutter-version: '3.19.0' # Opsional: kunci versi jika perlu
+          # flutter-version: '3.x.x' # Hapus komentar dan isi jika ingin versi tertentu
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: flutter pub get
 
       - name: Install Pods
         run: |
           cd ios
+          # Membersihkan cache pod lama agar tidak konflik
+          rm -rf Pods
+          rm -rf Podfile.lock
+          # Update repo dan install pod baru
+          pod repo update
           pod install
           cd ..
 
-      # Langkah ini akan gagal jika project butuh Code Signing (Sertifikat Apple)
-      # Gunakan flag --no-codesign untuk sekedar mengecek apakah build sukses
-      - name: neura
+      - name: Build IPA (No Code Signing)
+        # --no-codesign digunakan agar build tidak gagal karena tidak ada sertifikat Apple
         run: flutter build ipa --release --no-codesign
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-ipa
+          name: ios-ipa-release
           path: build/ios/ipa/*.ipa
+          if-no-files-found: warn
