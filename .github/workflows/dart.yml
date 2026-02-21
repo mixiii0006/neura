@@ -1,0 +1,48 @@
+name: neura
+
+on:
+  push:
+    branches: [ "main" ] # Jalankan saat push ke branch main
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-ios:
+    # WAJIB menggunakan macos untuk build iOS
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java (Beberapa plugin Flutter butuh ini)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          # flutter-version: '3.19.0' # Opsional: kunci versi jika perlu
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Install Pods
+        run: |
+          cd ios
+          pod install
+          cd ..
+
+      # Langkah ini akan gagal jika project butuh Code Signing (Sertifikat Apple)
+      # Gunakan flag --no-codesign untuk sekedar mengecek apakah build sukses
+      - name: neura
+        run: flutter build ipa --release --no-codesign
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: build/ios/ipa/*.ipa
